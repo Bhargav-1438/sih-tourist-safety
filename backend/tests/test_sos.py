@@ -1,4 +1,4 @@
-""""""Tests for the SOS schema validation."""
+"""Tests for the SOS schema validation."""
 import pytest
 from pydantic import ValidationError
 
@@ -61,7 +61,7 @@ def test_negative_tourist_id_rejected():
 
 
 def test_sos_create_does_not_accept_status():
-    """The client must not be able to set `status` — only the server sets it."""
+    """The client must not be able to set `status` - only the server sets it."""
     with pytest.raises(ValidationError):
         SOSCreate(**_valid_sos_data(status="resolved"))
 
@@ -75,7 +75,7 @@ def test_sos_boundary_coordinates_accepted():
 def test_sos_boundary_tourist_id_accepted():
     """tourist_id=1 (minimum valid) is accepted."""
     sos = SOSCreate(**_valid_sos_data(tourist_id=1))
-    assert sos.tourist_id == 1"""
+    assert sos.tourist_id == 1
 from fastapi import status
 from fastapi.testclient import TestClient
 

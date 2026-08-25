@@ -1,7 +1,7 @@
 """Pydantic schemas for incidents and SOS events."""
 import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # Incident types (simple strings, as specified by the prototype)
@@ -29,6 +29,16 @@ class IncidentBase(BaseModel):
 class IncidentCreate(IncidentBase):
     """Payload for creating a new incident."""
 
+    @field_validator("incident_type")
+    @classmethod
+    def incident_type_must_be_known(cls, value: str) -> str:
+        """Reject incident types outside the prototype's INCIDENT_TYPES list."""
+        if value not in INCIDENT_TYPES:
+            raise ValueError(
+                f"incident_type must be one of: {', '.join(INCIDENT_TYPES)}"
+            )
+        return value
+
 
 class IncidentResponse(IncidentBase):
     """Response body for an incident record."""
@@ -44,6 +54,8 @@ class SOSCreate(BaseModel):
     The `status` field is intentionally omitted — it is set by the server
     (default "active") and cannot be supplied by the client.
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     tourist_id: int = Field(..., gt=0, description="Must be a positive integer")
     latitude: float = Field(..., ge=-90, le=90, description="Valid latitude -90..90")

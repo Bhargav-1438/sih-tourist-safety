@@ -1,4 +1,4 @@
-""""""Tests for incident schema validation."""
+"""Tests for incident schema validation."""
 import datetime
 
 import pytest
@@ -88,7 +88,7 @@ def test_incident_latitude_boundary_values_accepted():
 def test_incident_longitude_boundary_values_accepted():
     """Longitudes -180 and 180 (the boundaries) are accepted."""
     IncidentCreate(**_valid_incident_data(longitude=-180.0))
-    IncidentCreate(**_valid_incident_data(longitude=180.0))"
+    IncidentCreate(**_valid_incident_data(longitude=180.0))
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -177,7 +177,7 @@ def test_invalid_longitude_rejected():
 
 
 def test_invalid_severity_rejected():
-    """Severity must be an integer (1–5 range enforced by convention)."""
+    """Severity must be an integer (1-5 range enforced by convention)."""
     # Verify that severity is returned as an integer (schema guarantee).
     inc = _seed_incident(16.1, 80.1, "medical", 5)
     resp = client.get("/api/incidents")
