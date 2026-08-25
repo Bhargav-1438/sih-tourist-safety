@@ -1,12 +1,13 @@
 """
 SIH Tourist Safety - Backend API.
 
-A minimal FastAPI application for the prototype foundation.
+Minimal FastAPI application for the prototype foundation.
 """
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import api_router
 from app.config import (
     DEBUG,
     ENVIRONMENT,
@@ -14,12 +15,28 @@ from app.config import (
     PROJECT_NAME,
     PROJECT_VERSION,
 )
+from app.database import Base, engine
+
+# Importing the models registers their tables with Base.metadata so that the
+# table-creation step in lifespan() (and in tests) has them available.
+from app.models import Tourist  # noqa: F401
+from app.api import api_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create database tables on startup. No migrations are used for this
+    # one-day prototype; tables are derived from the model definitions.
+    Base.metadata.create_all(bind=engine)
+    yield
+
 
 app = FastAPI(
     title=PROJECT_NAME,
     description=PROJECT_DESCRIPTION,
     version=PROJECT_VERSION,
     debug=DEBUG,
+    lifespan=lifespan,
 )
 
 # CORS: allow only the local Vite dev server during development so the
@@ -34,7 +51,7 @@ if ENVIRONMENT == "development":
         allow_headers=["*"],
     )
 
-# Include the (currently empty) API router under /api for future endpoints.
+# Include the API router (currently exposes tourist registration) under /api.
 app.include_router(api_router, prefix="/api")
 
 
@@ -42,3 +59,4 @@ app.include_router(api_router, prefix="/api")
 def health_check() -> dict:
     """Liveness check. Does not touch the database or require auth."""
     return {"status": "ok"}
+
