@@ -31,6 +31,11 @@ from app.models.tourist import Tourist  # noqa: E402
 
 Base.metadata.create_all(bind=engine)
 
+# Provide a stable JWT secret for tests (never log it). The application reads
+# its real value from the environment at import time, so this must be set before
+# app.security is imported.
+os.environ.setdefault("JWT_SECRET_KEY", "test-only-jwt-secret-not-for-production")
+
 
 @pytest.fixture(autouse=True)
 def _isolate_tourists():

@@ -39,3 +39,12 @@ PORT: int = int(os.getenv("PORT", "8000"))
 # SQLite local file. ``sqlite:///./tourist_safety.db`` stores the database
 # relative to the current working directory (the backend folder).
 DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./tourist_safety.db")
+
+# --- JWT / Digital ID ---
+# Used to sign the tourist's digital ID token. NEVER hard-code a secret here.
+# In development a default is provided only for local convenience; production
+# must always supply JWT_SECRET_KEY via the environment.
+JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "dev-only-insecure-secret-change-me")
+JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+# Token lifetime in hours (prototype default: 24h).
+JWT_EXPIRATION_HOURS: int = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
