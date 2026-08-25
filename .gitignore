@@ -1,0 +1,38 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyo
+
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables (keep the example, ignore the real file)
+.env
+.env.local
+.env.*.local
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Build / distribution artifacts
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Local SQLite database files
+*.db
+*.db-journal
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
