@@ -28,6 +28,7 @@ from sqlalchemy import delete  # noqa: E402
 
 from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.models.tourist import Tourist  # noqa: E402
+from app.models.incident import Incident, SOSEvent  # noqa: E402
 
 Base.metadata.create_all(bind=engine)
 

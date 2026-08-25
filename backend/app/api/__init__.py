@@ -1,7 +1,7 @@
 """API router package.
 
 Endpoint groups live under this router and are included by the main
-application. Currently exposes the tourist registration and digital-ID routes.
+application. Currently exposes registration and digital-ID routes.
 """
 from fastapi import APIRouter
 
