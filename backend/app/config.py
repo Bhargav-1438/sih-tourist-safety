@@ -48,3 +48,9 @@ JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "dev-only-insecure-secret-chan
 JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
 # Token lifetime in hours (prototype default: 24h).
 JWT_EXPIRATION_HOURS: int = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
+
+# --- Risk engine (DBSCAN clustering) ---
+# Default neighbourhood radius (km) and core-point threshold used by
+# GET /api/risk-zones. Both can be overridden per-request via query params.
+RISK_EPS_KM: float = float(os.getenv("RISK_EPS_KM", "0.5"))
+RISK_MIN_SAMPLES: int = int(os.getenv("RISK_MIN_SAMPLES", "4"))

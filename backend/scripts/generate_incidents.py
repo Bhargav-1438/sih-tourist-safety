@@ -19,6 +19,8 @@ import datetime
 import random
 import sys
 
+from app.models.incident import Incident
+
 # ---------------------------------------------------------------------------
 # Demo geography: Vijayawada, Andhra Pradesh, India area
 # ---------------------------------------------------------------------------
@@ -69,8 +71,6 @@ def generate_incidents(db_session, clear: bool = True) -> dict:
     Returns:
         A summary dict with counts for reporting.
     """
-    from app.models.incident import Incident
-
     rng = random.Random(RANDOM_SEED)
 
     if clear:

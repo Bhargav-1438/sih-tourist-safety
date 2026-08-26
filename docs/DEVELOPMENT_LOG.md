@@ -385,6 +385,98 @@ request); no internal errors or stack traces are exposed.
   `backend/.env.example` (JWT keys),
   `backend/tests/conftest.py` (set `JWT_SECRET_KEY` for tests).
 
+### 4.4 Prompt 4 — Incidents + SOS + Synthetic Dataset
+
+**Objective:** Add historical incident storage, emergency SOS events, their
+APIs, and a deterministic synthetic dataset for later ML evaluation.
+
+**New tables:** `incidents` (`id`, `latitude`, `longitude`,
+`incident_type`, `severity` 1-5, `occurred_at`) and `sos_events` (`id`,
+`tourist_id`, `latitude`, `longitude`, `status` default `"active"`,
+`created_at`). Both use SQLAlchemy 2.x typed mappings; `phone`-style string
+discipline kept (coordinates as floats, types as plain strings, no enums).
+No migrations — tables registered on `Base.metadata` and created at startup.
+
+**Endpoints added:** `GET /api/incidents` (full dataset, prototype-scale),
+`POST /api/sos` (validates tourist exists -> 201 / unknown -> 404 /
+bad coordinates -> 422), `GET /api/sos` (`{"sos_events": [...]}` envelope for
+the future authority dashboard). Status is server-assigned; clients cannot
+set it (`extra="forbid"` on `SOSCreate`).
+
+**Validation:** Pydantic bounds latitude -90..90, longitude -180..180,
+severity 1..5, positive integer `tourist_id`; incident types restricted to
+the six prototype strings via `field_validator`.
+
+**Synthetic dataset:** `scripts/generate_incidents.py` — fixed seed **42**;
+150 incidents = 5 dense clusters (25 pts each, +/-0.008 deg jitter) + 25
+noise points inside the Vijayawada demo bounding box (16.40-16.70 N,
+80.40-80.70 E); timestamps spread over 60 days; regeneration clears only the
+`incidents` table (tourists/SOS untouched).
+
+> The incident dataset is synthetic and created solely for prototype
+> demonstration and ML/risk-clustering evaluation. It does not represent real
+> crime statistics.
+
+**Tests:** 16 incident/SOS schema + API tests added (suite: 55 passing).
+
+**Result:** All endpoints verified live (201/404/422 paths); generator run
+twice produced identical datasets without duplicate accumulation.
+
+**Files created/modified:** `app/models/incident.py` (+`sos_event.py`
+re-export), `app/schemas/incident.py`, `app/api/incident.py`,
+`app/api/sos.py`, `scripts/generate_incidents.py`, router registration in
+`app/api/__init__.py`, `tests/test_incidents.py`, `tests/test_sos.py`.
+
+### 4.5 Prompt 5 — Risk Engine (DBSCAN Clustering)
+
+**Objective:** Cluster incident+SOS points into geographic risk zones and
+score each zone for the future heatmap/dashboard.
+
+**Implementation:** New pure module `app/risk_engine.py` — loads points from
+`incidents` + `sos_events` (SOS treated as effective severity 5, pseudo-type
+`sos`), converts lat/lon to radians, runs
+`sklearn.cluster.DBSCAN(metric="haversine", eps=eps_km/6371.0088,
+min_samples=k)` so neighbourhoods are true ground distances.
+
+**Scoring (0-100, explainable):**
+`score = round(100*(0.45*min(n/25,1) + 0.40*min(avg_weighted_sev/5,1) +
+0.15*distinct_types/7))`, where weighted severity applies per-type
+multipliers (theft 1.0, harassment 1.2, medical 1.3, accident 1.2,
+missing_person 1.5, unsafe_area 0.8, sos 1.4). Bands: >=75 CRITICAL,
+>=50 HIGH, >=25 MODERATE, else LOW. Zone center = member mean; radius =
+max haversine(center, member); output sorted score desc with stable
+tie-breaks (fully deterministic, verified under input shuffling).
+
+**Noise handling:** label -1 points are excluded from zones but reported as
+`noise_incidents` / `noise_sos` counts — nothing disappears silently.
+
+**Configuration:** `RISK_EPS_KM` (default 0.5) and `RISK_MIN_SAMPLES`
+(default 4) env keys, overridable per-request via validated query params
+(`eps_km` 0 < x <= 10, `min_samples` 1..50; violations -> 422).
+
+**Endpoint:** `GET /api/risk-zones` returning the `RiskZonesResponse`
+envelope (see `docs/API_REFERENCE.md`). Read-only; safe to poll; empty or
+sub-threshold data yields HTTP 200 with `zones: []`.
+
+**Dependency:** `scikit-learn>=1.4` added (pulls numpy/scipy/joblib).
+
+**Tests:** 16 new tests (engine clustering/noise/scoring/bands/radius/
+determinism, schema rejection cases, API sorting/empty-DB/422/SOS-counting).
+Suite: **71 passed**, zero regressions.
+
+**Manual verification:** seeded 150 incidents + 3 SOS near cluster centers;
+live run returned 6 zones scored 96/92/88/80/64/50 (CRITICAL/HIGH), SOS
+absorbed into the two nearest zones, totals and noise counts correct.
+
+**Limitations:** zones recomputed per request (no caching layer); zone
+center is the arithmetic mean (not medianoid); SOS severity is fixed; no
+temporal decay yet; endpoint unauthenticated like the rest of the prototype.
+
+**Files created/modified:** created `app/risk_engine.py`,
+`app/schemas/risk.py`, `app/api/risk.py`, `tests/test_risk_engine.py`;
+modified `requirements.txt`, `app/config.py`, `.env.example`,
+`app/api/__init__.py`, plus this documentation.
+
 ## 5. Current API Surface
 
 ### GET /health
@@ -453,6 +545,10 @@ request); no internal errors or stack traces are exposed.
   `valid: false` with HTTP 200). Malformed JSON bodies produce a standard
   FastAPI `422`.
 
+**Added in Prompts 4-5:** `GET /api/incidents`, `POST /api/sos`,
+`GET /api/sos`, and `GET /api/risk-zones`. Full request/response specs live
+in `docs/API_REFERENCE.md`; milestone context is in sections 4.4 and 4.5.
+
 ## 6. Current Database Schema
 
 ### Table: `tourists`
@@ -464,8 +560,31 @@ request); no internal errors or stack traces are exposed.
 | `phone` | VARCHAR(20) | NOT NULL, UNIQUE, INDEXED | Indian mobile number (string) |
 | `created_at` | DATETIME | NOT NULL, `server_default=NOW()` | Registration timestamp |
 
-Only the `tourists` table exists at this stage. No other tables have been
-created.
+Tables `incidents` and `sos_events` were added in Prompt 4 (section 4.4):
+
+### Table: `incidents`
+
+| Column | Type | Constraints | Purpose |
+|---|---|---|---|
+| `id` | INTEGER | PRIMARY KEY | Unique incident identifier |
+| `latitude` | FLOAT | NOT NULL | Incident latitude |
+| `longitude` | FLOAT | NOT NULL | Incident longitude |
+| `incident_type` | VARCHAR(50) | NOT NULL | theft/harassment/medical/accident/missing_person/unsafe_area |
+| `severity` | INTEGER | NOT NULL | 1 (low) - 5 (high) |
+| `occurred_at` | DATETIME | NOT NULL | When the incident occurred |
+
+### Table: `sos_events`
+
+| Column | Type | Constraints | Purpose |
+|---|---|---|---|
+| `id` | INTEGER | PRIMARY KEY | Unique SOS identifier |
+| `tourist_id` | INTEGER | NOT NULL, INDEXED | Reporting tourist |
+| `latitude` | FLOAT | NOT NULL | SOS latitude |
+| `longitude` | FLOAT | NOT NULL | SOS longitude |
+| `status` | VARCHAR(20) | NOT NULL, default `"active"` | `active` or `resolved` |
+| `created_at` | DATETIME | NOT NULL | When the SOS was raised |
+
+Both tables are consumed read-only by the Prompt 5 risk engine.
 
 ## 7. Testing & Verification
 
@@ -481,10 +600,16 @@ created.
 - `test_health.py` — 2 tests for `GET /health`.
 - `test_registration.py` — 7 tests for `POST /api/register`.
 - `test_digital_id.py` — 14 tests for digital-ID generation + verification.
+- `test_incidents.py` / `test_sos.py` — schema + API coverage for incidents
+  and SOS (Prompt 4).
+- `test_risk_engine.py` — engine, schema, and endpoint coverage for the
+  DBSCAN risk engine (Prompt 5), including a determinism test.
 
 ### Current test count
 
-**23 tests, all passing** (verified via `python -m pytest tests/ -v`).
+**71 tests, all passing** (23 after Prompts 1-3; expanded by Prompt 4's
+incident/SOS suites and Prompt 5's risk-engine suite; verified via
+`python -m pytest tests/ -v`).
 
 ### Major behaviors tested
 
@@ -567,8 +692,8 @@ The following features are **NOT IMPLEMENTED YET** and belong to upcoming
 milestones:
 
 - **JWT refresh / token rotation and revocation** (blacklists).
-- **QR-based SOS / live-location reporting.**
-- **Risk clustering** (DBSCAN) and **patrol optimization** (routing).
+- **Live-location streaming during an active SOS.**
+- **Patrol optimization** (routing over risk zones).
 - **Risk heatmaps** and geo-fencing.
 - **React + Vite + Leaflet** frontend.
 - **WebSockets** for real-time updates.
