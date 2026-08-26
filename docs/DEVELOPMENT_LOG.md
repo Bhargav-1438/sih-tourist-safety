@@ -582,6 +582,66 @@ payloads recompute per request; CORS covers local development origin only.
 `tests/test_integration_prompt7.py`; modified `app/api/__init__.py`,
 plus this documentation.
 
+### 4.10 Prompt 10 — Authority Dashboard
+
+**Objective:** Replace the `/authority` placeholder with a judge-facing
+command centre that renders all five backend datasets on one screen -
+without duplicating any clustering or optimization logic and without
+polling.
+
+**Data sources (single snapshot fetch on mount):** `/api/risk-heatmap`,
+`/api/incidents`, `/api/sos`, `/api/patrol-plan`,
+`/api/patrol-recommendations` via the existing typed API modules. Each
+source has an independent loading/error/retry state so one failure never
+blanks the dashboard; per-source error chips include Retry buttons.
+
+**Map layers (`components/authority/SafetyMap.tsx` over shared `MapView`):**
+1. Risk-zone `Circle`s using backend `radius_meters`, colour-coded
+   CRITICAL/HIGH/MODERATE/LOW from the shared `riskStyles` palette.
+2. Historical incidents as small slate dots with popups (type, severity,
+   timestamp, coordinates).
+3. SOS events as larger white-ringed red dots (visually urgent) with
+   id/tourist/time/status/coordinates popups.
+4. Current patrol posts from `/api/patrol-plan` as blue dashed rings,
+   explicitly captioned "Source: GET /api/patrol-plan (no live GPS feed)".
+5. AI-recommended units from `/api/patrol-recommendations` as solid green
+   markers plus thin green `Polyline` links to each covered zone center,
+   making the reasoning visible on-map.
+
+An overlay legend explains risk levels, incident/SOS dots, current posts,
+and AI-recommended units.
+
+**Statistics:** six KPI tiles derived purely from responses - total
+incidents, recorded SOS (+active count badge), risk zones, CRITICAL+HIGH
+count, placed AI patrols, coverage %. Nothing hard-coded.
+
+**Patrol panel:** AI recommendation cards (unit id, position pair, covered
+zone ids, count, share % bar, highest-level chip, per-served-zone distance
+list) plus a current-posts summary with source caption; uncovered zones are
+listed explicitly when present.
+
+**Shared refactor:** level colours extracted to
+`components/common/riskStyles.ts`; tourist `RiskMap` now imports them
+(single source of truth).
+
+**Verification:** build clean first try (100 modules; CSS 23.4 kB); live
+run against seeded data returned 150 incidents, 3 active SOS, 6 zones
+(4 CRITICAL / 2 HIGH), plan placed 3/3, recommendations coverage 64.67%
+(302/467 weight incl. one SOS-as-noise point), uncovered 2;
+`/authority` served the SPA HTML. Backend suite after frontend work:
+**99 passed**.
+
+**Limitations:** single snapshot fetch - no polling/refresh yet (Prompt 11);
+no live patrol GPS feed (plan positions stand in, clearly labelled);
+incidents render as points without severity-sized scaling; desktop-first
+layout (grid collapses under 900 px but is not phone-optimised).
+
+**Files created/modified:** created
+`src/components/authority/{SafetyMap,StatCards,PatrolPanel}.tsx` and
+`src/components/common/riskStyles.ts`; rewrote
+`src/pages/AuthorityPage.tsx`; extended `src/index.css`; refactored
+tourist `RiskMap.tsx` imports. Backend untouched.
+
 ### 4.8 Prompt 8 — Frontend Foundation
 
 **Objective:** Establish a clean, independently runnable React + Vite +

@@ -2,13 +2,7 @@
 import { Circle, Popup } from "react-leaflet";
 import MapView from "../common/MapView";
 import type { HeatmapMarker, RiskLevel } from "../../types/risk";
-
-const LEVEL_COLORS: Record<RiskLevel, string> = {
-  CRITICAL: "#c53030",
-  HIGH: "#dd6b20",
-  MODERATE: "#d69e2e",
-  LOW: "#38a169",
-};
+import { LEVEL_COLORS } from "../common/riskStyles";
 
 const USER_COLOR = "#2b6cb0";
 

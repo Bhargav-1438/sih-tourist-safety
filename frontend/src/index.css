@@ -413,3 +413,230 @@ body {
     height: 340px;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Prompt 10 - Authority command centre                                */
+/* ------------------------------------------------------------------ */
+
+.authority-page h2 {
+  margin-top: 0;
+}
+
+.authority-errors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  background: #fffaf0;
+  border: 1px solid #f6ad55;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 0.9rem;
+  color: #7b341e;
+  font-size: 0.9rem;
+}
+
+.authority-errors button {
+  background: none;
+  border: 1px solid #f6ad55;
+  border-radius: 6px;
+  color: #7b341e;
+  cursor: pointer;
+  padding: 0.15rem 0.5rem;
+}
+
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.stat-tile {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.stat-tile.stat-accent {
+  border-color: #f56565;
+  background: #fff5f5;
+}
+
+.stat-value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.stat-label {
+  color: #718096;
+  font-size: 0.82rem;
+}
+
+.authority-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 1rem;
+  align-items: start;
+}
+
+.authority-map-card h2,
+.patrol-section h2 {
+  margin-top: 0;
+}
+
+.safety-map-wrap {
+  position: relative;
+}
+
+.map-legend-card {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 500;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.82rem;
+  box-shadow: 0 2px 8px rgba(26, 32, 44, 0.12);
+}
+
+.map-legend-card ul {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.legend-dot,
+.legend-ring {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 0.4rem;
+  vertical-align: -1px;
+}
+
+.legend-ring {
+  background: transparent;
+  border-width: 2px;
+  border-style: dashed;
+  width: 9px;
+  height: 9px;
+}
+
+.patrol-panel-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.patrol-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.7rem;
+  background: #f7fafc;
+}
+
+.patrol-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.level-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.level-critical { background: #c53030; }
+.level-high { background: #dd6b20; }
+.level-moderate { background: #d69e2e; }
+.level-low { background: #38a169; }
+
+.patrol-position {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  margin: 0.3rem 0;
+}
+
+.coverage-caption {
+  margin: 0.45rem 0 0.25rem;
+  font-size: 0.88rem;
+}
+
+.coverage-bar {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.coverage-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38a169, #2b6cb0);
+}
+
+.coverage-numbers {
+  font-size: 0.8rem;
+  color: #718096;
+  margin: 0.25rem 0 0.4rem;
+}
+
+.served-zones {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0.4rem 0.55rem;
+  background: #edf2f7;
+  border-radius: 6px;
+  font-size: 0.83rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.uncovered-note {
+  font-size: 0.85rem;
+  color: #9b2c2c;
+  background: #fff5f5;
+  border: 1px dashed #fc8181;
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+}
+
+.current-post-line {
+  font-family: ui-monospace, monospace;
+  font-size: 0.84rem;
+  margin: 0.3rem 0;
+}
+
+.source-note {
+  font-size: 0.78rem;
+  color: #a0aec0;
+  margin: 0.5rem 0 0;
+}
+
+@media (max-width: 900px) {
+  .authority-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .patrol-panel-wrap {
+    position: static;
+  }
+}
