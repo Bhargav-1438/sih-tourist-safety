@@ -5,7 +5,15 @@ export default function AppLayout() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <h1 className="app-title">SIH Tourist Safety</h1>
+        <div className="app-title-group">
+          <h1 className="app-title">
+            <span className="app-title-mark" aria-hidden="true" />
+            SIH Tourist Safety
+          </h1>
+          <span className="app-tagline">
+            Predictive risk clustering &amp; patrol optimization
+          </span>
+        </div>
         <nav className="app-nav">
           <NavLink to="/" end>
             Home
