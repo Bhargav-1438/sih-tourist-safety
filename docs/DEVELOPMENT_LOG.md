@@ -42,8 +42,9 @@ future milestones and are **not yet implemented**.
 
 - **Starlette** (1.6.0): transitive dependency of FastAPI; provides
   `TestClient` and middleware (e.g. CORS).
-- **Leaflet / React / Vite**: mentioned in the project's overall plan but not
-  yet integrated.
+- **Frontend (Prompt 8):** a React 18 + Vite 5 + TypeScript foundation now
+  lives under `frontend/`, with Leaflet wired through react-leaflet v4 and
+  a typed API service layer against the backend routes.
 
 ### Planned / future technologies (NOT implemented)
 
@@ -580,6 +581,56 @@ payloads recompute per request; CORS covers local development origin only.
 `app/api/heatmap.py`, `app/api/recommendations.py`,
 `tests/test_integration_prompt7.py`; modified `app/api/__init__.py`,
 plus this documentation.
+
+### 4.8 Prompt 8 — Frontend Foundation
+
+**Objective:** Establish a clean, independently runnable React + Vite +
+TypeScript foundation under `frontend/` with a typed API service layer,
+routing, a reusable Leaflet map component, and environment configuration.
+Placeholders only - no feature UI.
+
+**Stack:** React 18.3 + Vite 5.4 + TypeScript 5.6, react-router-dom 6,
+leaflet 1.9 + react-leaflet 4.2 (React 18 pinned deliberately for stable
+react-leaflet v4 compatibility). No other libraries.
+
+**Structure:** `src/api` (client + six feature modules), `src/types`
+(five modules mirroring backend schemas field-for-field), `src/components`
+(`layout/AppLayout`, `common/MapView`), `src/pages`
+(Home/Tourist/Authority/NotFound), `src/routes/AppRouter`.
+
+**API layer:** central client reads `VITE_API_BASE_URL`
+(default `http://localhost:8000`), provides typed `apiGet`/`apiPost`
+(optional-body POST for `/api/digital-id/{id}`), parses JSON, and throws
+`ApiError {status, detail}` on non-2xx. Feature modules cover all ten
+backend routes: risk-zones, risk-heatmap, patrol-plan,
+patrol-recommendations, incidents, sos (GET+POST), register,
+digital-id generation, verify-id.
+
+**Types:** `RiskZone/RiskZonesResponse`, `HeatmapMarker/RiskHeatmapResponse`,
+`PatrolUnit/PatrolPlanResponse`,
+`ServedZone/PatrolRecommendation(s)Response`, `Incident`, `SOSEvent`,
+`Tourist`, `DigitalIdResponse`, `VerificationResponse` - copied from the
+Pydantic models, Leaflet positions as `[latitude, longitude]`.
+
+**Routing:** `/` (overview + map-foundation check circle at the Vijayawada
+demo center), `/tourist` and `/authority` placeholders, `*` -> NotFoundPage.
+`MapView` supports center/zoom/className/children so later prompts can drop
+in markers, circles, and popups.
+
+**Verification:** `npm install` (76 packages), `npm run build` -
+`tsc` clean then Vite build (84 modules; JS 323 kB / gzip 100 kB; CSS
+16.6 kB includes Leaflet styles); dev server route checks returned the SPA
+HTML for `/`, `/tourist`, `/authority`, and an unknown path (client-side
+404). Backend regression suite after frontend work: **99 passed**.
+
+**Issues encountered:** `npm create vite` hung on its first-run install
+prompt (scaffolded manually instead); Vite binds `localhost` via IPv6 while
+a 127.0.0.1 TCP probe failed (switched to HTTP-based readiness checks);
+TS required ES2022 lib for `Error(..., {cause})` and `object` typing for
+query-param bags (interface types lack implicit index signatures).
+
+**Stop point:** Prompts 9-12 (tourist app, authority dashboard, polling,
+feature rendering) were NOT started.
 
 ## 5. Current API Surface
 
