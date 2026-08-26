@@ -9,17 +9,22 @@ interface SosPanelProps {
   touristId: number;
   /** [latitude, longitude] that will be shared with authorities. */
   position: [number, number];
-  /** Notifies the dashboard so the safety banner can switch to SOS ACTIVE. */
+  /** Persisted/restored active event (starts the panel in ACTIVE phase). */
+  initialEvent?: SOSEvent | null;
+  /** Notifies the parent so persistence + banner stay in sync. */
   onActivated: (event: SOSEvent) => void;
 }
 
 export default function SosPanel({
   touristId,
   position,
+  initialEvent = null,
   onActivated,
 }: SosPanelProps) {
-  const [phase, setPhase] = useState<SosPhase>("idle");
-  const [event, setEvent] = useState<SOSEvent | null>(null);
+  const [event, setEvent] = useState<SOSEvent | null>(initialEvent);
+  const [phase, setPhase] = useState<SosPhase>(
+    initialEvent ? "active" : "idle",
+  );
   const [error, setError] = useState<string | null>(null);
 
   async function sendSos() {

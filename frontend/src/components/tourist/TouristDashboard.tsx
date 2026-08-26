@@ -1,8 +1,10 @@
 /** Tourist dashboard: safety status, map, SOS, identity, digital ID. */
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { usePolledSource } from "../../hooks/usePolling";
+import { POLL_INTERVALS } from "../../config/polling";
 import { getRiskHeatmap } from "../../api/risk";
-import type { HeatmapMarker } from "../../types/risk";
 import type { Tourist } from "../../types/tourist";
+import type { SOSEvent } from "../../types/sos";
 import DigitalIdCard from "./DigitalIdCard";
 import RiskMap from "./RiskMap";
 import SosPanel from "./SosPanel";
@@ -12,43 +14,25 @@ const DEMO_POSITION: [number, number] = [16.5062, 80.648];
 
 interface TouristDashboardProps {
   tourist: Tourist;
+  /** Restored/persisted active SOS event (null when none). */
+  activeSos: SOSEvent | null;
+  /** Called after a fresh SOS is accepted by the backend. */
+  onSosActivated: (event: SOSEvent) => void;
   onRegisterDifferent: () => void;
 }
 
-type HeatmapState =
-  | { phase: "loading" }
-  | { phase: "loaded"; markers: HeatmapMarker[] }
-  | { phase: "error"; message: string };
-
 export default function TouristDashboard({
   tourist,
+  activeSos,
+  onSosActivated,
   onRegisterDifferent,
 }: TouristDashboardProps) {
   const [position, setPosition] = useState<[number, number]>(DEMO_POSITION);
   const [positionIsDemo, setPositionIsDemo] = useState(true);
-  const [heatmap, setHeatmap] = useState<HeatmapState>({ phase: "loading" });
-  const [sosActive, setSosActive] = useState(false);
   const [showDigitalId, setShowDigitalId] = useState(false);
 
-  const loadHeatmap = useCallback(() => {
-    setHeatmap({ phase: "loading" });
-    getRiskHeatmap()
-      .then((response) =>
-        setHeatmap({ phase: "loaded", markers: response.markers }),
-      )
-      .catch((cause: unknown) =>
-        setHeatmap({
-          phase: "error",
-          message:
-            cause instanceof Error ? cause.message : "Request failed.",
-        }),
-      );
-  }, []);
-
-  // Fetch the risk heatmap ONCE when the dashboard loads (no polling yet).
-  useEffect(() => {
-    loadHeatmap();
-  }, [loadHeatmap]);
+  // Risk zones refresh periodically so newly generated zones appear.
+  const heatmap = usePolledSource(getRiskHeatmap, POLL_INTERVALS.risk);
 
   // Request the browser location once. On denial/error keep the documented
   // Vijayawada fallback so the demo never blocks.
@@ -66,6 +50,8 @@ export default function TouristDashboard({
     );
   }, []);
 
+  const sosActive = activeSos !== null;
+
   return (
     <div className="tourist-page">
       <div
@@ -73,18 +59,24 @@ export default function TouristDashboard({
         role="status"
       >
         {sosActive
-          ? "SOS ACTIVE - authorities notified"
+          ? `SOS ACTIVE - authorities notified (#${activeSos.id})`
           : "You are monitored. Tap SOS in an emergency."}
       </div>
 
       <SosPanel
         touristId={tourist.id}
         position={position}
-        onActivated={() => setSosActive(true)}
+        initialEvent={activeSos}
+        onActivated={onSosActivated}
       />
 
       <section className="tourist-card">
         <h2>Risk zones near you</h2>
+        {heatmap.stale && (
+          <p className="stale-chip" role="status">
+            Risk data may be outdated - retrying automatically.
+          </p>
+        )}
         {positionIsDemo && (
           <p className="demo-note" role="note">
             Using the Vijayawada demo location (geolocation unavailable or
@@ -92,12 +84,12 @@ export default function TouristDashboard({
           </p>
         )}
         <RiskMap
-          markers={heatmap.phase === "loaded" ? heatmap.markers : []}
+          markers={heatmap.data?.markers ?? []}
           userPosition={position}
           userPositionIsDemo={positionIsDemo}
-          loading={heatmap.phase === "loading"}
-          error={heatmap.phase === "error" ? heatmap.message : null}
-          onRetry={loadHeatmap}
+          loading={heatmap.loading}
+          error={heatmap.data === null ? heatmap.error : null}
+          onRetry={heatmap.reload}
         />
       </section>
 

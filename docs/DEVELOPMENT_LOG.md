@@ -642,6 +642,62 @@ layout (grid collapses under 900 px but is not phone-optimised).
 `src/pages/AuthorityPage.tsx`; extended `src/index.css`; refactored
 tourist `RiskMap.tsx` imports. Backend untouched.
 
+### 4.11 Prompt 11 — Frontend ↔ Backend Integration (Polling)
+
+**Objective:** Make the tourist app and authority dashboard behave as one
+connected safety system using polling - no WebSockets, SSE, or state
+libraries.
+
+**Polling architecture:** one shared `src/hooks/usePolling.ts` (the only
+`setInterval` in the codebase) drives a `usePolledSource` wrapper. It
+exposes the `Pollable<T>` shape (`data / loading / error / stale /
+lastUpdated`), plus `reload`. Per guarantee, it (1) runs at most one
+interval per mount (StrictMode-safe), (2) skips ticks while a request is
+in flight (no overlaps), (3) uses a monotonic request-id so a stale
+response can never overwrite newer data, (4) keeps the last successful
+payload on failure and marks it `stale` instead of blanking the screen,
+and (5) skips all work while `document.hidden`, firing an immediate
+catch-up tick on tab-return. `clearInterval` + listener removal happen on
+unmount.
+
+**Intervals (env-overridable):** SOS 5 s, risk (zones + incidents) 15 s,
+patrol (plan + recommendations) 30 s - centralized in
+`src/config/polling.ts` and `.env.example`
+(`VITE_SOS_POLL_MS`, `VITE_RISK_POLL_MS`, `VITE_PATROL_POLL_MS`), with code
+defaults 5000/15000/30000.
+
+**Cross-flow (tourist → SOS → authority):** the authority page polls each
+of its five feeds independently via `usePolledSource`. A tourist pressing
+SOS hits `POST /api/sos`; within the next SOS poll (5 s) the authority
+SOS layer, stat tile, and active count update **without a page reload**.
+Independent loading/error/retry states are retained; successful polls clear
+the stale chip and re-render mapped layers in place (stable keys, no map
+remount, so zoom/center/open popups are preserved).
+
+**Tourist side:** the dashboard heatmap now refreshes every 15 s; the
+active SOS state is lifted to `TouristPage` and persisted in localStorage
+(`sih_sos_active`) so a refresh restores the SOS ACTIVE banner/panel
+(marked "restored") without a manual reload. "Register a different
+tourist" clears it.
+
+**Verification:** `npm run build` clean (102 modules) after one lint-flagged
+unused-import fix; backend `pytest` suite **99 passed**; polling-grep
+confirms `setInterval` appears only inside `usePolling`.
+
+**Limitations:** frontend unit tests were intentionally not added (no
+Vitest/jsdom present - dropping a whole test stack in now would violate the
+prototype scope; behavior is instead verified by the live cross-flow
+validation); resolved/older SOS events still render on the authority map
+until the snapshot clears history; no SOS resolution action exists; polling
+stops while the tab is hidden and catches up on return (by design).
+
+**Files created/modified:** created `src/hooks/usePolling.ts`,
+`src/config/polling.ts`; modified `src/types/api.ts` (Pollable),
+`src/pages/AuthorityPage.tsx`,
+`src/components/tourist/{TouristDashboard,SosPanel}.tsx`,
+`src/pages/TouristPage.tsx`, `frontend/.env.example`, `src/index.css`,
+plus this documentation. Backend untouched.
+
 ### 4.8 Prompt 8 — Frontend Foundation
 
 **Objective:** Establish a clean, independently runnable React + Vite +
