@@ -698,6 +698,61 @@ stops while the tab is hidden and catches up on return (by design).
 `src/pages/TouristPage.tsx`, `frontend/.env.example`, `src/index.css`,
 plus this documentation. Backend untouched.
 
+### 4.12 Prompt 12 — Demo Hardening & Polish
+
+**Objective:** Final reliability pass before judging. No new features, no
+new dependencies, no backend changes — harden and verify the existing
+system.
+
+**Inspection (found clean):** backend + frontend + docs audited. No broken
+imports, dead code, `console.log`, `window.alert`, `debugger`,
+`TODO`/`FIXME`, raw `innerHTML`/`dangerouslySetInnerHTML`, or missing-marker
+`iconUrl` usage (all map points use `Circle`/`CircleMarker`). No committed
+secrets — only documented dev placeholders (`JWT_SECRET_KEY` default and
+`.env.example` values). Git working tree was clean at start.
+
+**Backend verification:** `pytest -q` → **99 passed** (baseline unchanged,
+no defects to fix). Route surface audited: `/health`,
+`/api/risk-zones|risk-heatmap|incidents|sos|patrol-plan|
+patrol-recommendations`, `/api/register`, `/api/sos`,
+`/api/digital-id/{id}`. CORS correctly restricted to
+`http://localhost:5173` under `ENVIRONMENT=development`; empty-DB and
+validation behaviour unchanged.
+
+**Frontend build:** `npm run build` → TypeScript clean, **102 modules**,
+single clean Vite pass, no unresolved imports.
+
+**Console/runtime audit:** none of the targeted red-flag patterns found.
+Map layers render via vector markers (no Leaflet PNG asset warnings); polling
+uses the single `usePolling` interval (grep: `setInterval` occurs **exactly
+once**); no WebSocket/SSE introduced.
+
+**Cross-flow/Phase-7 verification:** with backend + frontend running against
+the seeded 150-incident dataset: authority-visible SOS count was 0 → a
+tourist (via the real `/api/register`) then `/api/sos` created event #1
+(`active`) → three successive authority-side polls each observed **1 SOS
+event**, i.e. propagation within one polling interval and **no page reload**.
+Other feeds healthy in the same run: heatmap 6 zones, incidents 150,
+patrol-plan placed 3/3, recommendations placed 3 (coverage 65.07%). All three
+routes `/tourist`, `/authority`, `/does-not-exist` served the SPA HTML.
+
+**Startup documentation:** added root-level `README.md` with backend +
+frontend quick-start, URLs, `.env`/polling defaults, CORS note,
+synthetic-data disclaimer, demo flow, and test commands.
+
+**Files created:** `README.md`.
+
+**Files modified:** `docs/DEVELOPMENT_LOG.md` (this section).
+
+**Remaining limitations:** frontend unit-test framework intentionally absent
+(no Vitest/jsdom) — verification is end-to-end via live runs; polling pauses
+while a tab is hidden and catches up on return (by design); no live
+SOS-resolution workflow in the tourist UI; authentication remains the
+prototype digital-ID model, not full auth.
+
+**Stop point:** Prompt 12 is the final milestone. Nothing further was
+added.
+
 ### 4.8 Prompt 8 — Frontend Foundation
 
 **Objective:** Establish a clean, independently runnable React + Vite +
