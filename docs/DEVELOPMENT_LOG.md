@@ -534,6 +534,53 @@ endpoint unauthenticated like the rest of the prototype.
 (public distance helper), `app/config.py`, `.env.example`,
 `app/api/__init__.py`, plus this documentation.
 
+### 4.7 Prompt 7 — Backend Integration
+
+**Objective:** Expose dashboard-facing views of the existing engines without
+duplicating any logic, audit router wiring, review CORS for the future Vite
+frontend, and lock the integration in with tests.
+
+**New endpoints (pure adapters):**
+- `GET /api/risk-heatmap` — reshapes `compute_risk_zones()` output into
+  Leaflet-ready markers (`center: [lat, lon]`, `radius_meters`,
+  `risk_score/level`, counts, dominant type). Ordering inherited from the
+  engine (score desc) — fully deterministic.
+- `GET /api/patrol-recommendations` — runs `optimize_patrols()` verbatim,
+  then enriches every placement with `served_zones[]` detail (per-zone
+  score/level/haversine distance, sorted nearest-first) plus a Leaflet
+  `position` pair. Accepts the same parameters as `/api/patrol-plan`.
+
+**Router audit:** each of the now-eight routers is registered exactly once;
+enforced by a regression test that walks the route tree (handling FastAPI
+0.141's lazy `_IncludedRouter.original_router` nesting) and asserts no
+duplicate paths.
+
+**CORS review:** middleware already restricted to `http://localhost:5173`
+under `ENVIRONMENT == "development"` — correct as-is; verified live (below).
+No code change.
+
+**Tests:** 13 integration tests — cross-endpoint consistency
+(heatmap ⇔ risk-zones), marker ordering/centers, empty data, 422 validation,
+recommendation placement/distance recomputation, legacy key-set snapshots for
+`/risk-zones` + `/patrol-plan`, incidents→heatmap total agreement, and the
+router-uniqueness walk. Suite: **99 passed**, zero regressions.
+
+**Manual verification:** seeded dataset (150 incidents -> 6 zones / weight
+458): heatmap returned 6 markers (96/88/80 CRITICAL top-three);
+`units=3` placed patrols serving zones [5,6], [1], [2] -> coverage 65.07%
+with distances (5: 0.0 km, 6: 0.803 km); zones 3-4 reported uncovered.
+CORS probes from a live server: allowed origin echoed
+(`access-control-allow-origin: http://localhost:5173`), foreign origin
+absent, preflight `OPTIONS` -> 200 with method list.
+
+**Limitations:** polling only (no WebSockets by design); heatmap/recommendation
+payloads recompute per request; CORS covers local development origin only.
+
+**Files created/modified:** created `app/schemas/dashboard.py`,
+`app/api/heatmap.py`, `app/api/recommendations.py`,
+`tests/test_integration_prompt7.py`; modified `app/api/__init__.py`,
+plus this documentation.
+
 ## 5. Current API Surface
 
 ### GET /health
@@ -602,10 +649,11 @@ endpoint unauthenticated like the rest of the prototype.
   `valid: false` with HTTP 200). Malformed JSON bodies produce a standard
   FastAPI `422`.
 
-**Added in Prompts 4-6:** `GET /api/incidents`, `POST /api/sos`,
-`GET /api/sos`, `GET /api/risk-zones`, and `GET /api/patrol-plan`. Full
+**Added in Prompts 4-7:** `GET /api/incidents`, `POST /api/sos`,
+`GET /api/sos`, `GET /api/risk-zones`, `GET /api/patrol-plan`,
+`GET /api/risk-heatmap`, and `GET /api/patrol-recommendations`. Full
 request/response specs live in `docs/API_REFERENCE.md`; milestone context is
-in sections 4.4-4.6.
+in sections 4.4-4.7.
 
 ## 6. Current Database Schema
 
@@ -665,12 +713,16 @@ Both tables are consumed read-only by the Prompt 5 risk engine.
 - `test_patrol_optimizer.py` — greedy placement, coverage math, schema, and
   endpoint coverage for the patrol optimizer (Prompt 6), including a
   determinism test.
+- `test_integration_prompt7.py` — cross-endpoint integration for the
+  heatmap/recommendation views, backward-compatibility key-set snapshots,
+  chain-total agreement, and router-registration uniqueness (Prompt 7).
 
 ### Current test count
 
-**86 tests, all passing** (23 after Prompts 1-3; expanded by Prompt 4's
-incident/SOS suites, Prompt 5's risk-engine suite, and Prompt 6's
-patrol-optimizer suite; verified via `python -m pytest tests/ -v`).
+**99 tests, all passing** (23 after Prompts 1-3; expanded by Prompt 4's
+incident/SOS suites, Prompt 5's risk-engine suite, Prompt 6's
+patrol-optimizer suite, and Prompt 7's integration suite; verified via
+`python -m pytest tests/ -v`).
 
 ### Major behaviors tested
 
@@ -755,7 +807,7 @@ milestones:
 - **JWT refresh / token rotation and revocation** (blacklists).
 - **Live-location streaming during an active SOS.**
 - **Road-network routing between patrol points.**
-- **Risk heatmaps** and geo-fencing.
+- **Geo-fencing alerts.**
 - **React + Vite + Leaflet** frontend.
 - **WebSockets** for real-time updates.
 - **PostgreSQL / PostGIS** migration (SQLite is used only for the prototype).

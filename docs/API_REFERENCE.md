@@ -399,6 +399,127 @@ Output is deterministic for identical inputs; empty databases return
 
 ---
 
+## GET /api/risk-heatmap
+
+- **Purpose:** Leaflet-ready view of the DBSCAN risk zones. Pure adapter over
+  the Prompt 5 engine — no clustering logic duplicated; deterministic ordering.
+- **Query parameters:**
+
+| Parameter | Type | Default | Constraints | Description |
+|---|---|---|---|---|
+| `eps_km` | float | `0.5` (env `RISK_EPS_KM`) | > 0 and <= 10 | Upstream DBSCAN radius |
+| `min_samples` | integer | `4` (env `RISK_MIN_SAMPLES`) | >= 1 and <= 50 | Core-point threshold |
+
+**Request example:** `GET /api/risk-heatmap?eps_km=0.5&min_samples=4`
+
+### Success response (`200 OK`):
+
+```json
+{
+  "generated_at": "2026-08-26T10:44:02.881234Z",
+  "eps_km": 0.5,
+  "min_samples": 4,
+  "total_incidents": 150,
+  "total_sos": 0,
+  "noise_incidents": 35,
+  "noise_sos": 0,
+  "marker_count": 6,
+  "markers": [
+    {
+      "zone_id": 1,
+      "center": [16.599462, 80.449307],
+      "radius_meters": 943.1,
+      "risk_score": 96,
+      "risk_level": "CRITICAL",
+      "point_count": 25,
+      "incident_count": 25,
+      "sos_count": 0,
+      "dominant_incident_type": "missing_person",
+      "avg_severity": 3.92,
+      "last_event_at": "2026-08-20T21:14:00"
+    }
+  ]
+}
+```
+
+### Marker fields
+
+| Field | Type | Description |
+|---|---|---|
+| `zone_id` | integer | Source risk zone. |
+| `center` | `[lat, lon]` array | Direct input for Leaflet `L.circle(center, ...)`. |
+| `radius_meters` | number | Circle radius in metres. |
+| `risk_score` / `risk_level` | integer / string | Zone score (0–100) and band — use as the marker colour key. |
+| `point_count`, `incident_count`, `sos_count` | integers | Composition of the zone. |
+| `dominant_incident_type`, `avg_severity`, `last_event_at` | string / number / datetime | Tooltip metadata. |
+
+Markers are ordered by `risk_score` descending. Empty databases return
+`markers: []`.
+
+---
+
+## GET /api/patrol-recommendations
+
+- **Purpose:** Map-ready patrol placements: reuses the Prompt 6 greedy
+  optimizer verbatim and enriches every unit with the zones it serves.
+- **Query parameters:** identical to `/api/patrol-plan` —
+
+| Parameter | Type | Default | Constraints | Description |
+|---|---|---|---|---|
+| `units` | integer | `3` (env `PATROL_NUM_UNITS`) | >= 1 and <= 20 | Patrol units to place |
+| `service_radius_km` | float | `2.0` (env `PATROL_SERVICE_RADIUS_KM`) | > 0 and <= 25 | Coverage radius per patrol |
+| `eps_km` / `min_samples` | float / int | `0.5` / `4` | as `/api/risk-zones` | Passed through to clustering |
+
+### Success response (`200 OK`):
+
+```json
+{
+  "generated_at": "2026-08-26T10:45:10.220111Z",
+  "algorithm": "greedy_pmedian_weighted_coverage",
+  "requested_units": 3,
+  "placed_units": 3,
+  "service_radius_km": 2.0,
+  "total_zones": 6,
+  "total_weight": 458,
+  "covered_weight": 298,
+  "coverage_pct": 65.07,
+  "recommendations": [
+    {
+      "unit_id": 1,
+      "position": [16.448418, 80.680215],
+      "service_radius_km": 2.0,
+      "covers_zone_ids": [5, 6],
+      "covered_zone_count": 2,
+      "covered_weight": 114,
+      "coverage_share_pct": 24.89,
+      "avg_zone_distance_km": 0.402,
+      "highest_risk_level": "HIGH",
+      "served_zones": [
+        {"zone_id": 5, "risk_score": 64, "risk_level": "HIGH", "distance_km": 0.0},
+        {"zone_id": 6, "risk_score": 50, "risk_level": "HIGH", "distance_km": 0.803}
+      ]
+    }
+  ],
+  "uncovered_zones": [
+    {"zone_id": 3, "risk_score": 80, "risk_level": "CRITICAL",
+     "center_latitude": 16.503141, "center_longitude": 80.61929}
+  ]
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|---|---|---|
+| `recommendations[].position` | `[lat, lon]` array | Leaflet marker pair at the chosen zone center. |
+| `recommendations[].served_zones[]` | object array | Per-served-zone `zone_id`, `risk_score`, `risk_level`, and haversine `distance_km` from the patrol — sorted nearest-first. |
+| all other fields | — | Identical semantics to `/api/patrol-plan`. |
+
+Deterministic for identical inputs; empty databases return
+`recommendations: []`.
+
+---
+
 ## JWT Token Format
 
 The digital-ID token is a standard JWT (RFC 7519) signed with **HS256**.
