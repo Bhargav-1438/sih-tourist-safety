@@ -8,11 +8,13 @@ import type {
   PatrolPlanResponse,
   PatrolRecommendation,
 } from "../../types/patrol";
+import { TOURISM_REFERENCES, DEMO_RISK_ZONES } from "../../data/tourismReferences";
 
 const INCIDENT_COLOR = "#4a5568";
 const SOS_COLOR = "#e53e3e";
 const CURRENT_COLOR = "#2b6cb0";
 const RECOMMENDED_COLOR = "#38a169";
+const TOURISM_COLOR = "#7f9cf5";
 
 interface SafetyMapProps {
   markers: HeatmapMarker[];
@@ -29,6 +31,10 @@ export default function SafetyMap({
   plan,
   recommendations,
 }: SafetyMapProps) {
+  // Real API data always takes precedence. Fallback zones render ONLY when
+  // the backend returned no risk zones.
+  const showReferenceZones = markers.length === 0;
+
   // Zone-center lookup so recommendation links can be drawn on-map.
   const zoneCenters = new Map(
     markers.map((m) => [m.zone_id, m.center] as const),
@@ -36,6 +42,11 @@ export default function SafetyMap({
 
   return (
     <div className="safety-map-wrap">
+      {showReferenceZones && (
+        <div className="reference-badge" role="note">
+          REFERENCE / DEMO DATA
+        </div>
+      )}
       <MapView center={[16.5062, 80.648]} zoom={12}>
         {/* Layer 1 - risk zones (backend radii, level colours) */}
         {markers.map((marker) => (
@@ -63,6 +74,54 @@ export default function SafetyMap({
               {marker.avg_severity}
             </Popup>
           </Circle>
+        ))}
+
+        {/* Reference / demo fallback risk zones - only when no real zones */}
+        {showReferenceZones &&
+          DEMO_RISK_ZONES.map((marker) => (
+            <Circle
+              key={`demo-zone-${marker.zone_id}`}
+              center={marker.center}
+              radius={marker.radius_meters}
+              pathOptions={{
+                color: LEVEL_COLORS[marker.risk_level],
+                fillColor: LEVEL_COLORS[marker.risk_level],
+                fillOpacity: 0.12,
+                weight: 1.5,
+                dashArray: "6 5",
+              }}
+            >
+              <Popup>
+                <strong>REFERENCE zone - {marker.risk_level}</strong>
+                <br />
+                Score {marker.risk_score}/100 (demo data)
+                <br />
+                Dominant: {marker.dominant_incident_type}
+              </Popup>
+            </Circle>
+          ))}
+
+        {/* Reference tourism points - distinct visual layer */}
+        {TOURISM_REFERENCES.map((ref) => (
+          <CircleMarker
+            key={`ref-${ref.id}`}
+            center={[ref.latitude, ref.longitude]}
+            radius={6}
+            pathOptions={{
+              color: "#ffffff",
+              weight: 1.5,
+              fillColor: TOURISM_COLOR,
+              fillOpacity: 1,
+            }}
+          >
+            <Popup>
+              <strong>{ref.name}</strong>
+              <br />
+              {ref.kind}
+              <br />
+              Reference point (demo)
+            </Popup>
+          </CircleMarker>
         ))}
 
         {/* Layer 2 - historical incidents */}
@@ -208,6 +267,10 @@ export default function SafetyMap({
           <li>
             <span className="legend-dot" style={{ background: RECOMMENDED_COLOR }} />
             AI recommended
+          </li>
+          <li>
+            <span className="legend-dot" style={{ background: TOURISM_COLOR }} />
+            Reference point
           </li>
         </ul>
       </div>
