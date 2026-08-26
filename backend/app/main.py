@@ -47,7 +47,7 @@ if ENVIRONMENT == "development":
         CORSMiddleware,
         allow_origins=[
     "http://localhost:5173",
-    "https://YOUR-FRONTEND-URL.onrender.com",
+    "https://sih-tourist-safety-1.onrender.com",
 ],  # Vite dev server
         allow_credentials=True,
         allow_methods=["*"],
