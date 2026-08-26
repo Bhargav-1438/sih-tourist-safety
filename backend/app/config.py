@@ -54,3 +54,8 @@ JWT_EXPIRATION_HOURS: int = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
 # GET /api/risk-zones. Both can be overridden per-request via query params.
 RISK_EPS_KM: float = float(os.getenv("RISK_EPS_KM", "0.5"))
 RISK_MIN_SAMPLES: int = int(os.getenv("RISK_MIN_SAMPLES", "4"))
+
+# --- Patrol optimization (Prompt 6) ---
+# Defaults for GET /api/patrol-plan; both overridable via query params.
+PATROL_NUM_UNITS: int = int(os.getenv("PATROL_NUM_UNITS", "3"))
+PATROL_SERVICE_RADIUS_KM: float = float(os.getenv("PATROL_SERVICE_RADIUS_KM", "2.0"))

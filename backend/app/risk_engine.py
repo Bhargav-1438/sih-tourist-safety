@@ -56,7 +56,7 @@ def level_for_score(score: int) -> str:
     return "LOW"  # defensive fallback; scores are clamped to >= 0
 
 
-def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Great-circle distance between two degree coordinates, in km."""
     p1, p2 = math.radians(lat1), math.radians(lat2)
     dphi = p2 - p1
@@ -151,7 +151,7 @@ def compute_risk_zones_from_points(
         center_lon = sum(m["longitude"] for m in members) / n
         radius_m = (
             max(
-                _haversine_km(center_lat, center_lon, m["latitude"], m["longitude"])
+                haversine_km(center_lat, center_lon, m["latitude"], m["longitude"])
                 for m in members
             )
             * 1000.0

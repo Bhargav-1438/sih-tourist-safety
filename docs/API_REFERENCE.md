@@ -331,6 +331,74 @@ Output is sorted by `risk_score` descending (deterministic tie-breaks), so
 
 ---
 
+## GET /api/patrol-plan
+
+- **Purpose:** Recommend patrol-unit locations over the current DBSCAN risk
+  zones using deterministic greedy weighted-coverage (p-median style).
+- **Query parameters:**
+
+| Parameter | Type | Default | Constraints | Description |
+|---|---|---|---|---|
+| `units` | integer | `3` (env `PATROL_NUM_UNITS`) | >= 1 and <= 20 | Patrol units to place |
+| `service_radius_km` | float | `2.0` (env `PATROL_SERVICE_RADIUS_KM`) | > 0 and <= 25 | Coverage radius around each patrol |
+| `eps_km` / `min_samples` | float / integer | `0.5` / `4` | as `/api/risk-zones` | Passed through to upstream clustering |
+
+Violating constraints returns `422 Unprocessable Content`.
+
+**Request example:** `GET /api/patrol-plan?units=3&service_radius_km=2.0`
+
+### Success response (`200 OK`):
+
+```json
+{
+  "generated_at": "2026-08-26T10:12:44.512345Z",
+  "algorithm": "greedy_pmedian_weighted_coverage",
+  "requested_units": 3,
+  "placed_units": 3,
+  "service_radius_km": 2.0,
+  "total_zones": 6,
+  "total_weight": 458,
+  "covered_weight": 298,
+  "coverage_pct": 65.07,
+  "patrols": [
+    {
+      "unit_id": 1,
+      "latitude": 16.448418,
+      "longitude": 80.680215,
+      "covers_zone_ids": [5, 6],
+      "covered_zone_count": 2,
+      "covered_weight": 114,
+      "coverage_share_pct": 24.89,
+      "avg_zone_distance_km": 0.402,
+      "highest_risk_level": "HIGH"
+    }
+  ],
+  "uncovered_zones": [
+    {"zone_id": 3, "risk_score": 80, "risk_level": "CRITICAL",
+     "center_latitude": 16.503141, "center_longitude": 80.61929}
+  ]
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|---|---|---|
+| `algorithm` | string | Always `greedy_pmedian_weighted_coverage`. |
+| `requested_units` / `placed_units` | integer | Asked-for vs actually placeable (`placed <= min(units, zone_count)`). |
+| `total_weight` / `covered_weight` | integer | Sum of zone `risk_score`; covered portion served by patrols. |
+| `coverage_pct` | number | `100 * covered_weight / total_weight`. |
+| `patrols[].latitude/longitude` | number | Chosen zone center (deployment hint). |
+| `patrols[].covers_zone_ids` | int array | Served zone IDs, ascending. |
+| `patrols[].covered_weight` / `coverage_share_pct` | — | Weight served and its share of `total_weight`. |
+| `patrols[].highest_risk_level` | string | Most severe level among served zones. |
+| `uncovered_zones[]` | object array | Zones beyond reach of every placed patrol (explicit gap report). |
+
+Output is deterministic for identical inputs; empty databases return
+`patrols: []` with zeroed totals.
+
+---
+
 ## JWT Token Format
 
 The digital-ID token is a standard JWT (RFC 7519) signed with **HS256**.

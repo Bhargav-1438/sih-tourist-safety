@@ -477,6 +477,63 @@ temporal decay yet; endpoint unauthenticated like the rest of the prototype.
 modified `requirements.txt`, `app/config.py`, `.env.example`,
 `app/api/__init__.py`, plus this documentation.
 
+### 4.6 Prompt 6 — Patrol Optimization (Greedy p-Median)
+
+**Objective:** Recommend where to position a configurable number of patrol
+units over the Prompt 5 risk zones so that weighted risk coverage is
+maximised, with fully explainable placement.
+
+**Reuse:** consumes `compute_risk_zones()` output verbatim — no clustering
+logic duplicated. Candidate sites are the zone centers themselves; zone
+weight `w_z = risk_score` (0-100).
+
+**Algorithm:** classic greedy p-median heuristic. A patrol at candidate `c`
+covers every unassigned zone whose center lies within `service_radius_km`
+(haversine ground distance); each iteration places the candidate with the
+largest total uncovered weight inside that radius:
+`gain(c) = Σ w_z for unassigned z with dist(c, z.center) <= R`.
+Ties break by the engine's deterministic (-score, lat, lon) ordering. A
+candidate always covers its own zone (distance 0), so no placement is wasted.
+
+**Metrics returned per unit:** served `zone_id`s, `covered_weight`,
+`coverage_share_pct = 100·covered_w/total_weight`, mean haversine distance to
+served centers, highest served risk level. Envelope adds
+`requested/placed_units`, `total_weight`, `covered_weight`, `coverage_pct`,
+and an explicit `uncovered_zones` list (gaps are reported, never hidden).
+
+**Configuration:** `PATROL_NUM_UNITS` (default 3) and
+`PATROL_SERVICE_RADIUS_KM` (default 2.0), both overridable per-request.
+Query validation: `units` 1..20, `service_radius_km` > 0 and <= 25;
+upstream `eps_km`/`min_samples` pass through to the risk engine.
+
+**Endpoint:** `GET /api/patrol-plan` (see `docs/API_REFERENCE.md`).
+Empty or sub-threshold data yields HTTP 200 with `patrols: []`.
+
+**No new dependencies** — reuses the public `haversine_km()` helper
+(previously private `_haversine_km`) from the risk engine.
+
+**Tests:** 15 new (greedy priority, radius-limited chains, units>zones,
+empty input, share math, shuffle-determinism, schema rejections,
+API sorting/validation/critical-first placement). Suite: **86 passed**.
+
+**Manual verification:** seeded dataset (150 incidents -> 6 zones, total
+weight 458). `units=3`: placed at zones {5,6}, {1}, {2} -> coverage 65.07%;
+the optimizer correctly preferred two co-located MODERATE/HIGH zones
+(combined gain 114) over any single CRITICAL zone. `units=5, R=1.0`:
+100.0% coverage in five patrols (one unit serves the adjacent pair).
+Deterministic across repeated calls.
+
+**Limitations:** straight-line (haversine) proximity, not road-network
+routing; static demand weights (no time-of-day or live SOS weighting yet);
+zone center is the deployment hint rather than an optimised medianoid;
+endpoint unauthenticated like the rest of the prototype.
+
+**Files created/modified:** created `app/patrol_optimizer.py`,
+`app/schemas/patrol.py`, `app/api/patrol.py`,
+`tests/test_patrol_optimizer.py`; modified `app/risk_engine.py`
+(public distance helper), `app/config.py`, `.env.example`,
+`app/api/__init__.py`, plus this documentation.
+
 ## 5. Current API Surface
 
 ### GET /health
@@ -545,9 +602,10 @@ modified `requirements.txt`, `app/config.py`, `.env.example`,
   `valid: false` with HTTP 200). Malformed JSON bodies produce a standard
   FastAPI `422`.
 
-**Added in Prompts 4-5:** `GET /api/incidents`, `POST /api/sos`,
-`GET /api/sos`, and `GET /api/risk-zones`. Full request/response specs live
-in `docs/API_REFERENCE.md`; milestone context is in sections 4.4 and 4.5.
+**Added in Prompts 4-6:** `GET /api/incidents`, `POST /api/sos`,
+`GET /api/sos`, `GET /api/risk-zones`, and `GET /api/patrol-plan`. Full
+request/response specs live in `docs/API_REFERENCE.md`; milestone context is
+in sections 4.4-4.6.
 
 ## 6. Current Database Schema
 
@@ -604,12 +662,15 @@ Both tables are consumed read-only by the Prompt 5 risk engine.
   and SOS (Prompt 4).
 - `test_risk_engine.py` — engine, schema, and endpoint coverage for the
   DBSCAN risk engine (Prompt 5), including a determinism test.
+- `test_patrol_optimizer.py` — greedy placement, coverage math, schema, and
+  endpoint coverage for the patrol optimizer (Prompt 6), including a
+  determinism test.
 
 ### Current test count
 
-**71 tests, all passing** (23 after Prompts 1-3; expanded by Prompt 4's
-incident/SOS suites and Prompt 5's risk-engine suite; verified via
-`python -m pytest tests/ -v`).
+**86 tests, all passing** (23 after Prompts 1-3; expanded by Prompt 4's
+incident/SOS suites, Prompt 5's risk-engine suite, and Prompt 6's
+patrol-optimizer suite; verified via `python -m pytest tests/ -v`).
 
 ### Major behaviors tested
 
@@ -693,7 +754,7 @@ milestones:
 
 - **JWT refresh / token rotation and revocation** (blacklists).
 - **Live-location streaming during an active SOS.**
-- **Patrol optimization** (routing over risk zones).
+- **Road-network routing between patrol points.**
 - **Risk heatmaps** and geo-fencing.
 - **React + Vite + Leaflet** frontend.
 - **WebSockets** for real-time updates.
