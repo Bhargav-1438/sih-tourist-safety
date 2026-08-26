@@ -32,7 +32,7 @@ def register_tourist(
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="A tourist with this phone number is already registered.",
+            detail=TouristResponse.model_validate(existing).model_dump(mode="json"),
         )
 
     tourist = Tourist(name=payload.name, phone=payload.phone)

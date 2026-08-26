@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { registerTourist } from "../../api/tourist";
 import type { Tourist } from "../../types/tourist";
+import { ApiError } from "../../api/client";
 
 // Same rule the backend enforces: 10 digits, first digit 6-9.
 const PHONE_PATTERN = /^[6-9]\d{9}$/;
@@ -49,6 +50,22 @@ export default function RegistrationForm({ onRegistered }: RegistrationFormProps
       });
       onRegistered(tourist);
     } catch (cause) {
+      // A 409 means the mobile number is already registered. The backend
+      // returns the existing tourist profile in the response body, so we
+      // reuse it as an "existing profile" login and enter the dashboard.
+      if (cause instanceof ApiError && cause.status === 409) {
+        const existing = cause.detail as Tourist | null;
+        if (
+          existing &&
+          typeof existing === "object" &&
+          typeof (existing as { id?: unknown }).id === "number" &&
+          typeof (existing as { name?: unknown }).name === "string" &&
+          typeof (existing as { phone?: unknown }).phone === "string"
+        ) {
+          onRegistered(existing);
+          return;
+        }
+      }
       setError(
         cause instanceof Error
           ? cause.message
