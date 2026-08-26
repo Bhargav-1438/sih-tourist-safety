@@ -88,3 +88,328 @@ body {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Prompt 9 - Tourist application                                      */
+/* ------------------------------------------------------------------ */
+
+.tourist-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tourist-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1rem 1.15rem;
+  box-shadow: 0 1px 3px rgba(26, 32, 44, 0.06);
+}
+
+.tourist-card h2 {
+  margin-top: 0;
+}
+
+.muted,
+.field-hint,
+.sos-hint,
+.demo-note {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.demo-note {
+  margin-top: 0;
+}
+
+.status-banner {
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.status-safe {
+  background: #f0fff4;
+  color: #276749;
+  border: 1px solid #9ae6b4;
+}
+
+.status-alert {
+  background: #fff5f5;
+  color: #c53030;
+  border: 2px solid #fc8181;
+  animation: pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  from { box-shadow: 0 0 0 0 rgba(197, 48, 48, 0.25); }
+  to { box-shadow: 0 0 0 8px rgba(197, 48, 48, 0); }
+}
+
+.btn {
+  font: inherit;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #2b6cb0;
+  color: #fff;
+}
+
+.btn-secondary {
+  background: #edf2f7;
+  color: #2d3748;
+  border-color: #cbd5e0;
+}
+
+.btn-danger {
+  background: #c53030;
+  color: #fff;
+}
+
+.btn-block {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #2b6cb0;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  text-decoration: underline;
+}
+
+.registration-card label,
+.identity-card dt {
+  display: block;
+  font-weight: 600;
+  margin: 0.6rem 0 0.25rem;
+}
+
+.registration-card input {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.form-error {
+  background: #fff5f5;
+  border: 1px solid #fc8181;
+  color: #c53030;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+}
+
+.sos-panel {
+  text-align: center;
+}
+
+.btn-sos {
+  width: min(220px, 70vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #f56565, #c53030);
+  color: #fff;
+  font-size: clamp(1.6rem, 6vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border: 4px solid #9b2c2c;
+  box-shadow: 0 6px 16px rgba(197, 48, 48, 0.35);
+  margin: 0.5rem auto 0.35rem;
+  display: block;
+}
+
+.btn-sos:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+.sos-confirm {
+  border-color: #fc8181;
+}
+
+.sos-coords {
+  font-family: ui-monospace, monospace;
+}
+
+.sos-active {
+  background: #fff5f5;
+  border-color: #fc8181;
+}
+
+.sos-active h2 {
+  color: #c53030;
+  letter-spacing: 0.06em;
+}
+
+.sos-details {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.75rem 0;
+}
+
+.sos-details > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sos-details dt {
+  color: #4a5568;
+}
+
+.sos-details dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.btn-row {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.identity-details {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.identity-details > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.identity-details dd {
+  margin: 0;
+}
+
+.map-status {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #edf2f7;
+  border-radius: 8px;
+}
+
+.map-status-error p {
+  margin: 0 0 0.75rem;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.1rem;
+  margin-top: 0.6rem;
+  font-size: 0.88rem;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 32, 44, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.digital-id-card {
+  background: linear-gradient(160deg, #1a365d, #2b6cb0);
+  color: #fff;
+  border-radius: 14px;
+  width: min(360px, 94vw);
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.digital-id-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.digital-id-body {
+  padding: 1rem 1.15rem 1.15rem;
+}
+
+.digital-id-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 0.2rem;
+}
+
+.digital-id-meta {
+  margin: 0.15rem 0;
+  color: #bee3f8;
+  font-size: 0.92rem;
+}
+
+.digital-id-signature {
+  color: #90cdf4;
+  font-size: 0.8rem;
+  margin: 0.6rem 0 0.9rem;
+}
+
+.digital-id-qr {
+  display: block;
+  width: 180px;
+  height: auto;
+  margin: 0.6rem auto;
+  background: #fff;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+@media (max-width: 720px) {
+  .app-main {
+    padding: 1rem 0.85rem;
+  }
+
+  .map-view {
+    height: 340px;
+  }
+}

@@ -632,6 +632,73 @@ query-param bags (interface types lack implicit index signatures).
 **Stop point:** Prompts 9-12 (tourist app, authority dashboard, polling,
 feature rendering) were NOT started.
 
+### 4.9 Prompt 9 — Tourist Application
+
+**Objective:** Replace the `/tourist` placeholder with the complete
+tourist-side experience: registration, safety dashboard (risk map + current
+location), emergency SOS with confirmation, and the signed Digital ID with
+QR display - all against the real backend.
+
+**Registration flow:** `RegistrationForm` mirrors `TouristCreate` (name +
+Indian mobile). Client-side normalization/validation mirrors the backend
+(strips separators/+91, enforces `^[6-9]\d{9}$`) but the backend stays
+authoritative; API errors render inline. Submitting shows a busy state and,
+on success, transitions to the dashboard **without a page reload**.
+
+**Prototype persistence:** only the returned `Tourist` object is stored in
+`localStorage` under `sih_tourist` (validated on restore). A
+"Register a different tourist" action clears it. No tokens/sessions stored.
+
+**Dashboard:** hierarchy = safety banner -> SOS -> risk map -> identity ->
+Digital ID. The banner switches between *monitored* (green) and
+*SOS ACTIVE* (red pulse) based on SOS state.
+
+**Risk map:** `RiskMap` wraps `MapView`; fetches `GET /api/risk-heatmap`
+once per dashboard load with loading/error/retry states. Every marker renders
+as a Leaflet `Circle` (`center` + `radius_meters`) colour-coded by level
+(CRITICAL red / HIGH orange / MODERATE yellow / LOW green) with a popup
+showing score, incident/SOS counts, dominant type, avg severity. An HTML
+legend explains all four levels plus the current-location ring.
+
+**Location:** one-shot `navigator.geolocation.getCurrentPosition` centers the
+map and drives SOS coordinates; denial/unavailability falls back to the
+documented Vijayawada coordinate `[16.5062, 80.648]` with an explicit
+"demo location" note in both the UI and legend. No continuous watching.
+
+**SOS:** big round SOS button -> confirmation card ("Your current location
+will be shared...") -> `POST /api/sos` -> persistent **SOS ACTIVE** panel
+with event id/timestamp/coords/status. Send failures surface an error that
+explicitly says the SOS was NOT sent, with retry.
+
+**Digital ID:** "View Digital ID" opens a modal card fed by
+`POST /api/digital-id/{id}`: tourist name/ID, validity (`expires_at`),
+and the **backend-provided QR rendered directly from its data URL**
+(`<img src={qr_code}>` - no client-side QR generation). Includes a
+"digitally signed by the SIH backend (HS256)" indication.
+
+**Verification/build:** `npm run build` clean after fixes (94 modules;
+JS 334 kB); dev-server route checks pass; live end-to-end flow replayed the
+UI's exact calls - register 201, heatmap 200 (6 markers), digital-id 200
+(QR ok), verify-id `valid:true`, SOS 201 active; backend suite
+**99 passed**.
+
+**Issues encountered:** a temporary validation script sent GET instead of
+POST to the body-less digital-ID endpoint and reported a misleading 405
+(`Allow= POST` exposed it) - the frontend's `apiPost` was always correct.
+Also fixed during development: a TS narrowing error in SosPanel phase
+handling and an accidental reference to a non-existent
+`tourist_name` response field.
+
+**Limitations:** location streaming, SOS polling/resolution, authority
+dashboard (Prompt 10), integration/polling hardening (Prompt 11) are
+intentionally out of scope; SOS state is session-only (not persisted);
+single active SOS assumption.
+
+**Files created/modified:** created
+`src/components/tourist/{RegistrationForm,RiskMap,SosPanel,DigitalIdCard,TouristDashboard}.tsx`;
+rewrote `src/pages/TouristPage.tsx`; extended `src/index.css`.
+Backend untouched.
+
 ## 5. Current API Surface
 
 ### GET /health
